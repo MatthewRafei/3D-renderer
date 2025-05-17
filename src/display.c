@@ -9,13 +9,17 @@
 // VECTORS
 //const int N_POINTS = 9 * 9 * 9; // 729 different positions
 #define N_POINTS (9 * 9 * 9)
+
 vec3_t cube_points[N_POINTS];
+vec2_t projected_points[N_POINTS];
 
 // Globals
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
 uint32_t *color_buffer = NULL;
 SDL_Texture *color_buffer_texture = NULL;
+float fov_factor = 250;
+
 // Screen width and height global vars
 int SCREEN_WIDTH = 1280;
 int SCREEN_HEIGHT = 720;
@@ -116,13 +120,24 @@ bool process_input(void)
 vec2_t orth_project(vec3_t point)
 {
   vec2_t projected_point = {
-    .x = point.x;
-    .y = point.y;
+    .x = (fov_factor * point.x),
+    .y = (fov_factor * point.y)
+  };
+  
+  return projected_point;
 }
 
 void update(void)
 {
-  //TODO:
+  for(int i = 0; i < N_POINTS; i++){
+    vec3_t point = cube_points[i];
+
+    // Project the current point
+    vec2_t projected_point = orth_project(point);
+
+    // Save the projected 2D vector in the array of projected points
+    projected_points[i] = projected_point;
+  }
 }
 
 void clear_color_buffer(uint32_t color)
@@ -158,36 +173,51 @@ void draw_grid(uint32_t color)
   }
 }
 
-void draw_rect(int cord_x, int cord_y, int width, int height, uint32_t color)
-{
-  for(int y = cord_y; y < height; y++){
-    for(int x = cord_x; x < width; x++){
-      int current_x = cord_x + x;
-      int current_y = cord_y + y;
-      color_buffer[(SCREEN_WIDTH * current_y) + current_x] = color;
+/* void draw_rect(int cord_x, int cord_y, int width, int height, uint32_t color) */
+/* { */
+/*   for(int y = cord_y; y < height; y++){ */
+/*     for(int x = cord_x; x < width; x++){ */
+/*       draw_pixel(x, y, YELLOW); */
+/*     } */
+/*   } */
+/* } */
+
+
+void draw_rect(int x, int y, int width, int height, uint32_t color) {
+    for (int i = 0; i < width; i++) {
+        for (int j = 0; j < height; j++) {
+            int current_x = x + i;
+            int current_y = y + j;
+            draw_pixel(current_x, current_y, color);
+        }
     }
-  }
 }
 
 void draw_pixel(int x, int y, uint32_t color)
 {
-  if(x < SCREEN_WIDTH && y < SCREEN_HEIGHT){
+  if(x >= 0 && x < SCREEN_WIDTH && y >= 0 && y < SCREEN_HEIGHT){
     color_buffer[(SCREEN_WIDTH * y) + x] = color;
   }
 }
 
 void render(void)
 {
-  SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255); // RGBA // A = 255 = Full color
-  SDL_RenderClear(renderer);
-  clear_color_buffer(BLACK);
   //draw_grid(0xFFFFFF);
-  draw_rect(10, 10, 300, 150, WHITE);
-
-  draw_pixel(960, 540, YELLOW);
+  
+  //SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255); // RGBA // A = 255 = Full color
+  //SDL_RenderClear(renderer);
+  for(int i = 0; i < N_POINTS; i++){
+    vec2_t projected_point = projected_points[i];
+    draw_rect(projected_point.x + (SCREEN_WIDTH / 2), projected_point.y + (SCREEN_HEIGHT / 2), 4, 4, YELLOW);
+  }
+  
+  
+  //draw_rect(10, 10, 300, 150, WHITE);
+  //draw_pixel(960, 540, YELLOW);
 
   
   render_color_buffer();
+  clear_color_buffer(BLACK);
 
   SDL_RenderPresent(renderer);
 }
